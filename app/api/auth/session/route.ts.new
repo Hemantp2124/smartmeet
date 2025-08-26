@@ -1,0 +1,89 @@
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+
+export async function GET(request: Request) {
+  try {
+    const requestUrl = new URL(request.url);
+    const code = requestUrl.searchParams.get('code');
+    
+    const response = new NextResponse();
+    
+    // Create a Supabase client with the response cookies
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            const cookie = request.headers.get('cookie') ?? '';
+            const match = cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+            return match ? match[2] : null;
+          },
+          set(name: string, value: string, options: any) {
+            response.cookies.set({ 
+              name, 
+              value, 
+              ...options, 
+              path: '/',
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              httpOnly: true
+            });
+          },
+          remove(name: string, options: any) {
+            response.cookies.set({ 
+              name, 
+              value: '', 
+              ...options, 
+              maxAge: 0,
+              path: '/',
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              httpOnly: true
+            });
+          },
+        },
+      }
+    );
+    
+    // If there's a code, exchange it for a session
+    if (code) {
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) {
+        console.error('Exchange error:', exchangeError);
+        return NextResponse.json(
+          { error: 'Failed to exchange code for session' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // Get the current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { error: 'Failed to get session' },
+        { status: 401 }
+      );
+    }
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'No active session' },
+        { status: 401 }
+      );
+    }
+    
+    // Return the session data
+    return NextResponse.json({ session });
+    
+  } catch (error) {
+    console.error('Error in auth session route:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

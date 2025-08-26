@@ -1,0 +1,85 @@
+// app/api/auth/callback/[provider]/route.ts
+import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/database.types'
+
+export async function GET(
+  request: Request,
+  { params }: { params: { provider: string } }
+) {
+  try {
+    const requestUrl = new URL(request.url)
+    const code = requestUrl.searchParams.get('code')
+    const redirectTo = requestUrl.searchParams.get('redirectedFrom') || '/dashboard'
+    const errorParam = requestUrl.searchParams.get('error')
+
+    if (errorParam) {
+      console.error('OAuth error:', errorParam)
+      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(errorParam)}`, request.url))
+    }
+
+    if (!code) {
+      return NextResponse.redirect(new URL('/login?error=no_code', request.url))
+    }
+
+    // Create a response object for redirect
+    const response = NextResponse.redirect(new URL(redirectTo, request.url))
+    
+    // Create a Supabase client with cookie handling
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.headers.get('cookie')?.match(new RegExp(`(^| )${name}=([^;]+)`))?.[2]
+          },
+          set(name: string, value: string, options: any) {
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+              path: '/',
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              httpOnly: true,
+              maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+            })
+          },
+          remove(name: string, options: any) {
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+              path: '/',
+              maxAge: 0,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              httpOnly: true
+            })
+          },
+        },
+      }
+    )
+
+    // Exchange the code for a session
+    const { data, error: authError } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (authError) {
+      console.error('Error exchanging code for session:', authError)
+      return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
+    }
+
+    // If we get here, authentication was successful
+    console.log('Successfully authenticated user:', data.user?.email)
+    
+    // Return the response with the auth cookies set
+    return response
+  } catch (error) {
+    console.error('Auth callback error:', error)
+    return NextResponse.redirect(
+      new URL(`/login?error=auth_failed`, request.url)
+    )
+  }
+}
