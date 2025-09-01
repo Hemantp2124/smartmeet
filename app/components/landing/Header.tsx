@@ -33,13 +33,9 @@ export function Header() {
           </nav>
           
           <div className="flex items-center gap-3">
-            <Button variant="ghost" asChild className="text-gray-300 hover:text-white hover:bg-white/5">
-              <Link href="/login">Sign In</Link>
-            </Button>
             <Button asChild className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-              <Link href="/register">Get Started</Link>
+              <Link href="/auth">Get Started</Link>
             </Button>
-           
           </div>
         </div>
       </div>

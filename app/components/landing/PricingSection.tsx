@@ -64,7 +64,7 @@ export function PricingSection() {
                 ))}
               </ul>
               <Link 
-                href={plan.ctaLink}
+                href="/auth"
                 className={`${
                   plan.popular 
                     ? 'gradient-button' 

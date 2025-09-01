@@ -14,7 +14,6 @@ type SignOutButtonProps = {
   fullWidth?: boolean;
   children?: React.ReactNode;
   className?: string;
-  redirectTo?: string;
   onSignOut?: () => void;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
@@ -25,7 +24,6 @@ export function SignOutButton({
   showIcon = true,
   children = 'Sign Out',
   fullWidth = false,
-  redirectTo = '/login',
   onSignOut,
   ...props
 }: SignOutButtonProps) {
@@ -61,7 +59,7 @@ export function SignOutButton({
       
       // 5. Force a full page reload to the auth page
       // This ensures all application state is cleared
-      window.location.href = redirectTo || '/login';
+      window.location.href = '/auth';
       
     } catch (error: any) {
       console.error('Sign out error:', error);

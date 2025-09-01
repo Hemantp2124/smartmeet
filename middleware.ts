@@ -5,11 +5,11 @@ import { createServerClient } from '@supabase/ssr';
 // List of public paths that don't require authentication
 const publicPaths = [
   '/',
-  '/login',
-  '/signup',
-  '/register',
-  '/forgot-password',
-  '/reset-password'
+  '/auth',
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms'
 ];
 
 // API routes that don't require authentication
@@ -25,8 +25,8 @@ const publicPathPatterns = [
   /^\/favicon\.ico$/           // Match favicon
 ];
 
-// List of auth paths that should redirect to dashboard if already authenticated
-const authPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+// Auth path that should redirect to dashboard if already authenticated
+const authPaths = ['/auth'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -99,7 +99,7 @@ export async function middleware(request: NextRequest) {
 
   // If user is not signed in and the current path is not public, redirect to login
   if (!user && !authToken) {
-    const redirectUrl = new URL('/login', request.url);
+    const redirectUrl = new URL('/auth', request.url);
     const redirectPath = pathname + request.nextUrl.search;
     redirectUrl.searchParams.set('redirectedFrom', redirectPath);
     return NextResponse.redirect(redirectUrl);
